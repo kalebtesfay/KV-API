@@ -1,5 +1,4 @@
 class Api::V1::ProductsController < ApplicationController
-    # GET /products
     def index
         byebug
         if params[:instock] == "true"
@@ -11,14 +10,13 @@ class Api::V1::ProductsController < ApplicationController
         render json: @products
     end
     
-    # GET /products/1
     def show
         @product = Product.find(params[:id])
         
-        if params[:purchase]
-            if params[:purchase] == "true" && @product.inventory_count > 0
-                @product.inventory_count -= 1
-                @product.save
+        if params[:addtocart]
+            if params[:addtocart] == "true" && @product.inventory_count > 0
+                product_id = @product.id
+                CartController.add(product_id)
                 output = @product
             else
                 output = {'error' => 'product out of strock'}.to_json
@@ -30,39 +28,29 @@ class Api::V1::ProductsController < ApplicationController
         render json: output
     end
     
-    # POST /products
-    def create
-        @product = product.new(product_params)
-        if @product.save
-            render json: @product, status: :created, location:        api_v1_product_url(@product)
-        else
-        render json: @product.errors, status: :unprocessable_entity
+    def purchase
+        Product.where(params[:product_ids]).each do |p|
+            if p.inventory_count > 0
+                p.inventory_count -= 1
+                p.save
+            else 
+                if !failed_ids 
+                    failed_ids = Array.new
+                else
+                    failed_ids.push(p.id)
+                end
+            end
         end
-    end
-   
-    # PATCH/PUT /products/1
-    def update
-        if @product.update(product_params)
-            render json: @product
+        
+        if failed_ids
+            output = 
+            {
+                'error' => 'error some products failed to be purchased',
+                'product_ids' => failed_ids
+            }.to_json
         else
-            render json: @product.errors, status: :unprocessable_entity
+            output = {'alert' => 'product purchase succesful'}.to_json
         end
-    end
-    
-    # DELETE /products/1
-    def destroy
-        @product.destroy
-    end
-    
-    private
-    
-    # Use callbacks to share common setup or constraints between actions.
-    def set_product
-        @product = product.find(params[:id])
-    end
-    
-    # Only allow a trusted parameter “white list” through.
-    def product_params
-        params.require(:product).permit(:title, :content, :slug)
+        output
     end
 end
