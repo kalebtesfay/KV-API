@@ -1,35 +1,27 @@
 class Api::V1::CartController < ApplicationController
     def show
-        
         if session[:cart]
-            render json: Product.find(session[:cart])
+            products = Product.find(session[:cart])
+            @sum = products.inject(0) { |sum, p| sum + p.price }
+            
+            output =
+            {
+                'total' => @sum,
+                'products' => products
+            }.to_json
+            
+            render json: output
         else
             render json: {'alert' => 'cart is empty'}.to_json
         end
     end
     
-    def checkout
-        if session[:cart]
-            product_ids = session[:cart]
-            output = ProductsController.purchase(product_ids)
-        end
-        
-        render json: output
+    def checkout    
+        redirect_to api_v1_products_purchase_path 
     end
     
     def clear
         session[:cart] = nil
-        render json: session[:cart]
-    end
-    
-    def add
-        if session[:cart]
-            session[:cart].push(params[:id])
-            
-        else
-            session[:cart] = Array.new
-        end
-        
         render json: session[:cart]
     end
 end

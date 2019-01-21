@@ -4,7 +4,10 @@ Rails.application.routes.draw do
   
   # Get all products
   get 'api/v1/products', to: 'api/v1/products#index'
-  
+
+  # Purchases
+  get 'api/v1/products/purchase', to: 'api/v1/products#purchase'
+
   # Show the items in the cart
   get 'api/v1/cart', to: 'api/v1/cart#show'
   
@@ -13,8 +16,8 @@ Rails.application.routes.draw do
   
   # Clear cart contents
   get 'api/v1/cart/clear', to: 'api/v1/cart#clear'
-  
-  # Add to cart 
-  get 'api/v1/cart/add', to: 'api/v1/cart#add'
-  
+
+  if Rails.env.development?
+   get '404', :to => 'application#page_not_found'
+  end
 end

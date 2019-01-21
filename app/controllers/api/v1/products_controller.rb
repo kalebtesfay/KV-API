@@ -1,6 +1,5 @@
 class Api::V1::ProductsController < ApplicationController
     def index
-        byebug
         if params[:instock] == "true"
             @products = Product.where("inventory_count > 0 ")
         else
@@ -15,8 +14,7 @@ class Api::V1::ProductsController < ApplicationController
         
         if params[:addtocart]
             if params[:addtocart] == "true" && @product.inventory_count > 0
-                product_id = @product.id
-                CartController.add(product_id)
+                addtocart(@product.id)
                 output = @product
             else
                 output = {'error' => 'product out of strock'}.to_json
@@ -24,33 +22,45 @@ class Api::V1::ProductsController < ApplicationController
         else
             output = @product
         end
-
         render json: output
     end
     
     def purchase
-        Product.where(params[:product_ids]).each do |p|
-            if p.inventory_count > 0
-                p.inventory_count -= 1
-                p.save
-            else 
-                if !failed_ids 
-                    failed_ids = Array.new
-                else
-                    failed_ids.push(p.id)
+        if session[:cart]
+            Product.find(session[:cart]).each do |p|
+                if p.inventory_count > 0
+                    p.inventory_count -= 1
+                    p.save
+                    
+                    if !@success_ids 
+                        @success_ids = Array.new
+                    end
+                    @success_ids.push(p.id)
+                else 
+                    if !@failed_ids 
+                        @failed_ids = Array.new
+                    end
+                    @failed_ids.push(p.id)
                 end
             end
         end
-        
-        if failed_ids
-            output = 
-            {
-                'error' => 'error some products failed to be purchased',
-                'product_ids' => failed_ids
-            }.to_json
-        else
-            output = {'alert' => 'product purchase succesful'}.to_json
+            
+        output = 
+        {
+            'alert' => 'purchase completed',
+            'failed_product_ids' => @failed_ids,
+            'successful_product_ids' => @success_ids
+        }.to_json
+       
+        session[:cart] = nil
+        render json: output
+    end
+    
+    def addtocart(product_id)
+        if ! session[:cart]
+            session[:cart] = Array.new
         end
-        output
+
+        session[:cart].push(product_id)
     end
 end
